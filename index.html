@@ -2,13 +2,13 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Memorama VR</title>
+<title>Memorama VR Meta</title>
 
 <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
 <script>
 
-// ===== IMAGENES DE CARTAS =====
+// ===== IMAGENES =====
 const cardImages = [
 "img/carta1.jpg",
 "img/carta2.jpg",
@@ -17,25 +17,20 @@ const cardImages = [
 "img/carta5.jpg"
 ];
 
-// ===== IMAGEN REVERSO =====
 const backImage = "img/reverso.jpg";
 
 let shuffledPairs=[];
 
 function shufflePairs(){
-
 shuffledPairs=[];
-
 for(let i=0;i<cardImages.length;i++){
 shuffledPairs.push(i+1);
 shuffledPairs.push(i+1);
 }
-
 for(let i=shuffledPairs.length-1;i>0;i--){
 const j=Math.floor(Math.random()*(i+1));
 [shuffledPairs[i],shuffledPairs[j]]=[shuffledPairs[j],shuffledPairs[i]];
 }
-
 }
 
 let firstCard=null;
@@ -45,29 +40,53 @@ let lockBoard=false;
 let score=0;
 let timeLeft=120;
 let timerInterval;
+let gameStarted=false;
 let gameOver=false;
+
+
+// ===== INICIAR JUEGO =====
+function startGame(){
+
+document.querySelector("#startScreen").setAttribute("visible",false);
+
+gameStarted=true;
+
+shufflePairs();
+
+const cards=document.querySelectorAll("[card]");
+
+cards.forEach((card,index)=>{
+let pairNumber=shuffledPairs[index];
+card.setAttribute("card","pair:"+pairNumber);
+
+let frontPlane=card.querySelectorAll("a-plane")[0];
+let backPlane=card.querySelectorAll("a-plane")[1];
+
+frontPlane.setAttribute("src", backImage);
+backPlane.setAttribute("src",cardImages[pairNumber-1]);
+});
+
+startTimer();
+
+// 🎵 TU MUSICA (HTML REAL - FUNCIONA SIEMPRE)
+let music = document.querySelector("#bgMusic");
+music.volume = 0.7;
+music.play();
+
+}
 
 
 // ===== COMPONENTE CARTA =====
 AFRAME.registerComponent('card',{
-
 schema:{pair:{type:'int'}},
 
 init:function(){
 
 this.flipped=false;
 
-let frontPlane=this.el.querySelectorAll("a-plane")[0];
-let backPlane=this.el.querySelectorAll("a-plane")[1];
-
-frontPlane.setAttribute("src", backImage);
-backPlane.setAttribute("src",cardImages[this.data.pair-1]);
-
 this.el.addEventListener('click',()=>{
 
-if(lockBoard||this.flipped||gameOver) return;
-
-document.querySelector("#flipSound").components.sound.playSound();
+if(!gameStarted || lockBoard || this.flipped || gameOver) return;
 
 this.flip();
 
@@ -86,33 +105,19 @@ checkMatch();
 },
 
 flip:function(){
-
 this.flipped=true;
-
-this.el.setAttribute("animation",{
-property:"rotation",
-to:"0 180 0",
-dur:400
-});
-
+this.el.setAttribute("animation",{property:"rotation",to:"0 180 0",dur:400});
 },
 
 unflip:function(){
-
 this.flipped=false;
-
-this.el.setAttribute("animation",{
-property:"rotation",
-to:"0 0 0",
-dur:400
-});
-
+this.el.setAttribute("animation",{property:"rotation",to:"0 0 0",dur:400});
 }
 
 });
 
 
-// ===== COMPROBAR PAREJAS =====
+// ===== MATCH =====
 function checkMatch(){
 
 if(firstCard.data.pair===secondCard.data.pair){
@@ -135,7 +140,6 @@ document.querySelector("#message")
 document.querySelector("#winSound").components.sound.playSound();
 
 clearInterval(timerInterval);
-
 gameOver=true;
 
 setTimeout(restartGame,5000);
@@ -149,30 +153,23 @@ resetBoard();
 }else{
 
 setTimeout(()=>{
-
 firstCard.unflip();
 secondCard.unflip();
-
 resetBoard();
-
 },1000);
 
 }
 
 }
 
-
-// ===== RESET TABLERO =====
 function resetBoard(){
-
 firstCard=null;
 secondCard=null;
 lockBoard=false;
-
 }
 
 
-// ===== TEMPORIZADOR =====
+// ===== TIMER =====
 function startTimer(){
 
 timerInterval=setInterval(()=>{
@@ -188,7 +185,6 @@ document.querySelector("#timer")
 if(timeLeft<=0){
 
 clearInterval(timerInterval);
-
 gameOver=true;
 
 document.querySelector("#message")
@@ -203,202 +199,95 @@ setTimeout(restartGame,5000);
 }
 
 
-// ===== REINICIAR JUEGO =====
+// ===== RESTART =====
 function restartGame(){
 
 score=0;
 timeLeft=120;
 gameOver=false;
+gameStarted=false;
 
-document.querySelector("#score")
-.setAttribute("value","Puntos: 0");
-
-document.querySelector("#message")
-.setAttribute("value","");
-
-shufflePairs();
-
-const cards=document.querySelectorAll("[card]");
-
-cards.forEach((card,index)=>{
-
-card.setAttribute("visible",true);
-
-let pairNumber=shuffledPairs[index];
-
-card.setAttribute("card","pair:"+pairNumber);
-
-card.object3D.rotation.y=0;
-
-let comp=card.components.card;
-comp.flipped=false;
-
-let frontPlane=card.querySelectorAll("a-plane")[0];
-let backPlane=card.querySelectorAll("a-plane")[1];
-
-frontPlane.setAttribute("src", backImage);
-backPlane.setAttribute("src",cardImages[pairNumber-1]);
-
-});
+document.querySelector("#score").setAttribute("value","Puntos: 0");
+document.querySelector("#message").setAttribute("value","");
 
 clearInterval(timerInterval);
-
-startTimer();
-
-}
-
-
-// ===== INICIO =====
-window.onload = () => {
-
-function startMusic(){
-
-let music=document.querySelector("#music");
-
-if(music && music.components && music.components.sound){
-music.components.sound.playSound();
-}
-
-document.removeEventListener("click",startMusic);
-document.removeEventListener("touchstart",startMusic);
-
-}
-
-document.addEventListener("click",startMusic);
-document.addEventListener("touchstart",startMusic);
-
-shufflePairs();
-
-const cards=document.querySelectorAll("[card]");
-
-cards.forEach((card,index)=>{
-
-let pairNumber=shuffledPairs[index];
-
-card.setAttribute("card","pair:"+pairNumber);
-
-let frontPlane=card.querySelectorAll("a-plane")[0];
-let backPlane=card.querySelectorAll("a-plane")[1];
-
-frontPlane.setAttribute("src", backImage);
-backPlane.setAttribute("src",cardImages[pairNumber-1]);
-
-});
-
-startTimer();
-
 }
 
 </script>
-
 </head>
 
 <body>
 
-<a-scene background="color:#050505">
+<a-scene 
+background="color:#050505"
+xr-mode-ui="enabled: true"
+webxr="referenceSpaceType: local-floor"
+renderer="antialias: true">
 
-<!-- ===== SONIDOS ===== -->
+<!-- 🎵 AUDIO REAL -->
+<audio id="bgMusic" src="img/bittersuite_clip.mp3" preload="auto" loop></audio>
 
-<a-entity id="flipSound"
-sound="src:https://cdn.pixabay.com/audio/2022/03/10/audio_6c8b2f6c1c.mp3">
-</a-entity>
-
+<!-- SONIDO GANAR -->
 <a-entity id="winSound"
 sound="src:https://cdn.pixabay.com/audio/2022/10/16/audio_12c6f4df6a.mp3">
 </a-entity>
 
-<a-entity id="music"
-sound="src: img/bittersuite_clip.mp3; autoplay:false; loop:true; volume:0.6">
-</a-entity>
-
-
+<!-- CAMARA -->
 <a-camera position="0 1.6 8">
 <a-cursor fuse="true" fuse-timeout="2000" color="yellow"></a-cursor>
 </a-camera>
 
+<!-- CONTROLES VR -->
+<a-entity laser-controls="hand: right" raycaster="objects: .clickable" line="color: yellow"></a-entity>
+<a-entity laser-controls="hand: left" raycaster="objects: .clickable" line="color: yellow"></a-entity>
+
+<!-- LUCES -->
 <a-light type="ambient" intensity="0.7"></a-light>
 <a-light type="point" position="0 5 5"></a-light>
 
+<!-- UI -->
+<a-text id="timer" value="Tiempo: 2:00" position="-3 4 -3" color="red"></a-text>
+<a-text id="score" value="Puntos: 0" position="1 4 -3" color="cyan"></a-text>
+<a-text id="message" value="" position="-1 4.8 -3" color="yellow"></a-text>
 
-<a-text id="timer"
-value="Tiempo: 2:00"
-position="-3 4 -3"
-color="red"
-width="6"></a-text>
+<!-- BOTON START -->
+<a-entity id="startScreen" position="0 2 -3">
 
-<a-text id="score"
-value="Puntos: 0"
-position="1 4 -3"
-color="cyan"
-width="6"></a-text>
+    <a-plane class="clickable"
+        width="2.5" height="0.8"
+        color="#ffd400"
+        material="shader: standard; emissive: #ffcc00; emissiveIntensity: 0.8"
+        animation="property: scale; dir: alternate; dur: 900; loop: true; to: 1.05 1.05 1"
+        event-set__enter="_event:mouseenter; color:#fff066; material.emissive:#ffff00"
+        event-set__leave="_event:mouseleave; color:#ffd400; material.emissive:#ffcc00"
+        onclick="startGame()">
+    </a-plane>
 
-<a-text id="message"
-value=""
-position="-1 4.8 -3"
-color="yellow"
-width="8"></a-text>
+    <a-text 
+        value="START"
+        align="center"
+        position="0 0 0.05"
+        color="#ff0000"
+        width="6"
+        animation="property: scale; dir: alternate; dur: 700; loop: true; to: 1.1 1.1 1">
+    </a-text>
 
-
-<a-plane rotation="-90 0 0"
-width="20"
-height="20"
-color="#1a1a1a"></a-plane>
-
-
-<!-- FILA 1 -->
-
-<a-entity card="pair:1" position="-4 3 -4">
-<a-plane width="1" height="1.5"></a-plane>
-<a-plane rotation="0 180 0" width="1" height="1.5"></a-plane>
 </a-entity>
 
-<a-entity card="pair:2" position="-2 3 -4">
-<a-plane width="1" height="1.5"></a-plane>
-<a-plane rotation="0 180 0" width="1" height="1.5"></a-plane>
-</a-entity>
+<a-plane rotation="-90 0 0" width="20" height="20" color="#1a1a1a"></a-plane>
 
-<a-entity card="pair:3" position="0 3 -4">
-<a-plane width="1" height="1.5"></a-plane>
-<a-plane rotation="0 180 0" width="1" height="1.5"></a-plane>
-</a-entity>
+<!-- CARTAS -->
+<a-entity card class="clickable" position="-4 3 -4"><a-plane width="1" height="1.5"></a-plane><a-plane rotation="0 180 0" width="1" height="1.5"></a-plane></a-entity>
+<a-entity card class="clickable" position="-2 3 -4"><a-plane width="1" height="1.5"></a-plane><a-plane rotation="0 180 0" width="1" height="1.5"></a-plane></a-entity>
+<a-entity card class="clickable" position="0 3 -4"><a-plane width="1" height="1.5"></a-plane><a-plane rotation="0 180 0" width="1" height="1.5"></a-plane></a-entity>
+<a-entity card class="clickable" position="2 3 -4"><a-plane width="1" height="1.5"></a-plane><a-plane rotation="0 180 0" width="1" height="1.5"></a-plane></a-entity>
+<a-entity card class="clickable" position="4 3 -4"><a-plane width="1" height="1.5"></a-plane><a-plane rotation="0 180 0" width="1" height="1.5"></a-plane></a-entity>
 
-<a-entity card="pair:4" position="2 3 -4">
-<a-plane width="1" height="1.5"></a-plane>
-<a-plane rotation="0 180 0" width="1" height="1.5"></a-plane>
-</a-entity>
-
-<a-entity card="pair:5" position="4 3 -4">
-<a-plane width="1" height="1.5"></a-plane>
-<a-plane rotation="0 180 0" width="1" height="1.5"></a-plane>
-</a-entity>
-
-
-<!-- FILA 2 -->
-
-<a-entity card="pair:1" position="-4 1.2 -4">
-<a-plane width="1" height="1.5"></a-plane>
-<a-plane rotation="0 180 0" width="1" height="1.5"></a-plane>
-</a-entity>
-
-<a-entity card="pair:2" position="-2 1.2 -4">
-<a-plane width="1" height="1.5"></a-plane>
-<a-plane rotation="0 180 0" width="1" height="1.5"></a-plane>
-</a-entity>
-
-<a-entity card="pair:3" position="0 1.2 -4">
-<a-plane width="1" height="1.5"></a-plane>
-<a-plane rotation="0 180 0" width="1" height="1.5"></a-plane>
-</a-entity>
-
-<a-entity card="pair:4" position="2 1.2 -4">
-<a-plane width="1" height="1.5"></a-plane>
-<a-plane rotation="0 180 0" width="1" height="1.5"></a-plane>
-</a-entity>
-
-<a-entity card="pair:5" position="4 1.2 -4">
-<a-plane width="1" height="1.5"></a-plane>
-<a-plane rotation="0 180 0" width="1" height="1.5"></a-plane>
-</a-entity>
+<a-entity card class="clickable" position="-4 1.2 -4"><a-plane width="1" height="1.5"></a-plane><a-plane rotation="0 180 0" width="1" height="1.5"></a-plane></a-entity>
+<a-entity card class="clickable" position="-2 1.2 -4"><a-plane width="1" height="1.5"></a-plane><a-plane rotation="0 180 0" width="1" height="1.5"></a-plane></a-entity>
+<a-entity card class="clickable" position="0 1.2 -4"><a-plane width="1" height="1.5"></a-plane><a-plane rotation="0 180 0" width="1" height="1.5"></a-plane></a-entity>
+<a-entity card class="clickable" position="2 1.2 -4"><a-plane width="1" height="1.5"></a-plane><a-plane rotation="0 180 0" width="1" height="1.5"></a-plane></a-entity>
+<a-entity card class="clickable" position="4 1.2 -4"><a-plane width="1" height="1.5"></a-plane><a-plane rotation="0 180 0" width="1" height="1.5"></a-plane></a-entity>
 
 </a-scene>
 
